@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Start MinIO (real S3-compatible server)
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio server /data
+          for i in $(seq 1 30); do curl -sf http://localhost:9000/minio/health/live && break; sleep 1; done
+
+      - name: Start a real FTP server
+        run: |
+          pip install pyftpdlib
+          mkdir -p /tmp/ftproot
+          nohup python3 -m pyftpdlib -p 2121 -w -u drive -P drivepass -d /tmp/ftproot > /tmp/ftp.log 2>&1 &
+          sleep 2
+
+      - name: Run tests
+        env:
+          RAILS_ENV: test
+          CI: "true"
+          S3_LIVE_TEST: "1"
+          FTP_LIVE_TEST: "1"
+          FTP_HOST: "127.0.0.1"
+          FTP_PORT: "2121"
+          FTP_USERNAME: drive
+          FTP_PASSWORD: drivepass
+        run: |
+          bin/rails db:prepare
+          bin/rails test

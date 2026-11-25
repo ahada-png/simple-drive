@@ -1,0 +1,47 @@
+# Simple Drive storage configuration.
+#
+# Pick the active backend with STORAGE_BACKEND = local | database | s3 | ftp
+# Every value can be overridden with the environment variable shown.
+# String values go through #to_json so secrets containing YAML-special
+# characters (": ", "#", "&", "*", quotes...) are parsed correctly.
+
+default: &default
+  backend: <%= ENV.fetch("STORAGE_BACKEND", "local").to_json %>
+
+  # Largest blob accepted, in bytes (decoded size). Default 10 MB.
+  max_blob_size: <%= ENV.fetch("MAX_BLOB_SIZE", 10 * 1024 * 1024).to_i %>
+
+  local:
+    root: <%= ENV.fetch("LOCAL_STORAGE_PATH") { Rails.root.join("storage", "blobs").to_s }.to_json %>
+
+  database: {}
+
+  s3:
+    endpoint: <%= ENV.fetch("S3_ENDPOINT", "http://localhost:9000").to_json %>
+    bucket: <%= ENV.fetch("S3_BUCKET", "simple-drive").to_json %>
+    region: <%= ENV.fetch("S3_REGION", "us-east-1").to_json %>
+    access_key_id: <%= ENV.fetch("S3_ACCESS_KEY_ID", "").to_json %>
+    secret_access_key: <%= ENV.fetch("S3_SECRET_ACCESS_KEY", "").to_json %>
+    # true  -> http://endpoint/bucket/key   (MinIO, most self-hosted servers)
+    # false -> http://bucket.endpoint/key   (AWS virtual-hosted style)
+    force_path_style: <%= ENV.fetch("S3_FORCE_PATH_STYLE", "true") == "true" %>
+
+  ftp:
+    host: <%= ENV.fetch("FTP_HOST", "localhost").to_json %>
+    port: <%= ENV.fetch("FTP_PORT", "21").to_i %>
+    username: <%= ENV.fetch("FTP_USERNAME", "anonymous").to_json %>
+    password: <%= ENV.fetch("FTP_PASSWORD", "").to_json %>
+    directory: <%= ENV.fetch("FTP_DIRECTORY", "/simple-drive").to_json %>
+    passive: <%= ENV.fetch("FTP_PASSIVE", "true") == "true" %>
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+  backend: local
+  local:
+    root: <%= Rails.root.join("tmp", "test_storage").to_s.to_json %>
+
+production:
+  <<: *default
