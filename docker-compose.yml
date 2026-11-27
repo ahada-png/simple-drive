@@ -1,26 +1,24 @@
-# Local S3 (MinIO) and FTP servers for trying the non-local backends.
+# Local S3-compatible server (moto) and FTP server for trying the non-local backends.
+# (MinIO's public Docker images were withdrawn in 2026, so moto is used for S3.)
 #   docker compose up -d
 services:
-  minio:
-    image: minio/minio
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+  s3:
+    image: motoserver/moto:latest
     ports:
-      - "9000:9000" # S3 API
-      - "9001:9001" # web console
-    volumes:
-      - minio-data:/data
+      - "5000:5000"
 
-  # Creates the "simple-drive" bucket once MinIO is up.
-  minio-setup:
-    image: minio/mc
-    depends_on: [minio]
+  # Creates the "simple-drive" bucket once the S3 server is up.
+  s3-setup:
+    image: amazon/aws-cli
+    depends_on: [s3]
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
     entrypoint: >
       /bin/sh -c "
-      until mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 1; done;
-      mc mb --ignore-existing local/simple-drive
+      until aws --endpoint-url http://s3:5000 s3api list-buckets > /dev/null; do sleep 1; done;
+      aws --endpoint-url http://s3:5000 s3 mb s3://simple-drive || true
       "
 
   ftp:
@@ -31,6 +29,3 @@ services:
     ports:
       - "21:21"
       - "21000-21010:21000-21010" # passive mode ports
-
-volumes:
-  minio-data:
