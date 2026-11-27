@@ -16,9 +16,9 @@ Requests are authenticated with Bearer tokens.
 
 ```bash
 bundle install                        # creates Gemfile.lock: commit it
-bin/rails db:prepare
-bin/rails "api_tokens:create[me]"     # prints a token once; copy it
-bin/rails server
+bundle exec rails db:prepare
+bundle exec rails "api_tokens:create[me]"     # prints a token once; copy it
+bundle exec rails server
 ```
 
 ```bash
@@ -67,19 +67,19 @@ Set `STORAGE_BACKEND` to `local`, `database`, `s3` or `ftp`. All settings live i
 
 ```bash
 # Local file system (the only required setting is the directory)
-STORAGE_BACKEND=local LOCAL_STORAGE_PATH=/home/john/server_storage bin/rails s
+STORAGE_BACKEND=local LOCAL_STORAGE_PATH=/home/john/server_storage bundle exec rails s
 
 # Database
-STORAGE_BACKEND=database bin/rails s
+STORAGE_BACKEND=database bundle exec rails s
 
 # S3 / MinIO
 docker compose up -d minio minio-setup
 STORAGE_BACKEND=s3 S3_ENDPOINT=http://localhost:9000 S3_BUCKET=simple-drive \
-  S3_ACCESS_KEY_ID=minioadmin S3_SECRET_ACCESS_KEY=minioadmin bin/rails s
+  S3_ACCESS_KEY_ID=minioadmin S3_SECRET_ACCESS_KEY=minioadmin bundle exec rails s
 
 # FTP
 docker compose up -d ftp
-STORAGE_BACKEND=ftp FTP_HOST=localhost FTP_USERNAME=drive FTP_PASSWORD=drivepass bin/rails s
+STORAGE_BACKEND=ftp FTP_HOST=localhost FTP_USERNAME=drive FTP_PASSWORD=drivepass bundle exec rails s
 ```
 
 For AWS itself, use `S3_ENDPOINT=https://s3.<region>.amazonaws.com` and `S3_FORCE_PATH_STYLE=false`.
@@ -109,7 +109,7 @@ Storage::Adapter            store(key, bytes) / retrieve(key) / delete(key)
 - **Consistency.** See [Consistency](#consistency) below.
 - **Integrity.** A SHA-256 checksum is stored on upload and checked on every read.
 - **Local writes are atomic.** Each file is written to a temp file, then renamed.
-- **Tokens.** Only a SHA-256 digest of each token is stored, and lookup goes by digest. Manage tokens with `api_tokens:create[name]`, `api_tokens:list` and `api_tokens:revoke[id]`. `API_TOKEN=... bin/rails db:seed` creates a known token for scripts.
+- **Tokens.** Only a SHA-256 digest of each token is stored, and lookup goes by digest. Manage tokens with `api_tokens:create[name]`, `api_tokens:list` and `api_tokens:revoke[id]`. `API_TOKEN=... bundle exec rails db:seed` creates a known token for scripts.
 
 ### S3 without an SDK
 
@@ -137,7 +137,7 @@ Two cases are handled on purpose:
 ## Tests
 
 ```bash
-bin/rails test
+bundle exec rails test
 ```
 
 - Unit tests for every adapter, the signer (AWS test vectors), the service, the factory and tokens.
