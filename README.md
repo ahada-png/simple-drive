@@ -72,10 +72,10 @@ STORAGE_BACKEND=local LOCAL_STORAGE_PATH=/home/john/server_storage bundle exec r
 # Database
 STORAGE_BACKEND=database bundle exec rails s
 
-# S3 / MinIO
-docker compose up -d minio minio-setup
-STORAGE_BACKEND=s3 S3_ENDPOINT=http://localhost:9000 S3_BUCKET=simple-drive \
-  S3_ACCESS_KEY_ID=minioadmin S3_SECRET_ACCESS_KEY=minioadmin bundle exec rails s
+# S3 (local S3-compatible server from docker-compose)
+docker compose up -d s3 s3-setup
+STORAGE_BACKEND=s3 S3_ENDPOINT=http://localhost:5000 S3_BUCKET=simple-drive \
+  S3_ACCESS_KEY_ID=test S3_SECRET_ACCESS_KEY=test bundle exec rails s
 
 # FTP
 docker compose up -d ftp
@@ -143,4 +143,4 @@ bundle exec rails test
 - Unit tests for every adapter, the signer (AWS test vectors), the service, the factory and tokens.
 - Integration tests for the HTTP API: auth, validation, duplicates, 404, path ids, the database backend end to end, and backend failure → 502.
 - Ids with Arabic text, spaces, `#`, `?`, `%`, `+` and emoji, sent percent-encoded and read back.
-- Live tests against real servers: `test/integration/s3_live_test.rb` (MinIO, `S3_LIVE_TEST=1`) and `test/integration/ftp_live_test.rb` (FTP, `FTP_LIVE_TEST=1`). CI (GitHub Actions) starts a real MinIO and a real FTP server and runs both.
+- Live tests against real servers: `test/integration/s3_live_test.rb` (any S3-compatible server, `S3_LIVE_TEST=1`) and `test/integration/ftp_live_test.rb` (FTP, `FTP_LIVE_TEST=1`). CI (GitHub Actions) starts an S3-compatible server ([moto](https://github.com/getmoto/moto)) with real IAM credentials and SigV4 signature checking, plus a real FTP server, and runs both. The S3 live test also checks that a wrong secret is rejected with `SignatureDoesNotMatch`.
