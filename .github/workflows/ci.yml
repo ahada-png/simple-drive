@@ -16,12 +16,26 @@ jobs:
           ruby-version: "3.3"
           bundler-cache: true
 
-      - name: Start MinIO (real S3-compatible server)
+      # moto is an S3-compatible server. With INITIAL_NO_AUTH_ACTION_COUNT it
+      # enforces real IAM credentials and SigV4 signature checks after the first
+      # few (bootstrap) calls, so the live test proves our signer is accepted
+      # and that a wrong secret is rejected.
+      - name: Start an S3-compatible server (moto, signature checking on)
         run: |
-          docker run -d --name minio -p 9000:9000 \
-            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
-            minio/minio server /data
-          for i in $(seq 1 30); do curl -sf http://localhost:9000/minio/health/live && break; sleep 1; done
+          pip install "moto[server]"
+          INITIAL_NO_AUTH_ACTION_COUNT=3 nohup moto_server -p 5000 > /tmp/moto.log 2>&1 &
+          for i in $(seq 1 30); do (echo > /dev/tcp/127.0.0.1/5000) 2>/dev/null && break; sleep 1; done
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import boto3, json
+          iam = boto3.client("iam", endpoint_url="http://localhost:5000", region_name="us-east-1",
+                             aws_access_key_id="bootstrap", aws_secret_access_key="bootstrap")
+          iam.create_user(UserName="simple-drive")
+          key = iam.create_access_key(UserName="simple-drive")["AccessKey"]
+          iam.put_user_policy(UserName="simple-drive", PolicyName="s3", PolicyDocument=json.dumps(
+              {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "s3:*", "Resource": "*"}]}))
+          print(f"S3_ACCESS_KEY_ID={key['AccessKeyId']}")
+          print(f"S3_SECRET_ACCESS_KEY={key['SecretAccessKey']}")
+          PY
 
       - name: Start a real FTP server
         run: |
@@ -35,6 +49,7 @@ jobs:
           RAILS_ENV: test
           CI: "true"
           S3_LIVE_TEST: "1"
+          S3_ENDPOINT: "http://localhost:5000"
           FTP_LIVE_TEST: "1"
           FTP_HOST: "127.0.0.1"
           FTP_PORT: "2121"
