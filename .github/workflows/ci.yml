@@ -40,5 +40,5 @@ jobs:
           FTP_USERNAME: drive
           FTP_PASSWORD: drivepass
         run: |
-          bin/rails db:prepare
-          bin/rails test
+          bundle exec rails db:prepare
+          bundle exec rails test
