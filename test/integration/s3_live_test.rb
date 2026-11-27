@@ -1,20 +1,20 @@
 require "test_helper"
 
-# Talks to a real S3-compatible server (MinIO from docker-compose.yml).
+# Talks to a real S3-compatible server (moto in CI, see .github/workflows/ci.yml).
 # Skipped unless S3_LIVE_TEST=1, so the default suite needs no network.
 #
-#   docker compose up -d minio
+#   docker compose up -d s3
 #   S3_LIVE_TEST=1 bin/rails test test/integration/s3_live_test.rb
 class S3LiveTest < ActiveSupport::TestCase
   setup do
     skip "set S3_LIVE_TEST=1 to run against a real S3 server" unless ENV["S3_LIVE_TEST"] == "1"
 
     @config = {
-      endpoint: ENV.fetch("S3_ENDPOINT", "http://localhost:9000"),
+      endpoint: ENV.fetch("S3_ENDPOINT", "http://localhost:5000"),
       bucket: "simple-drive-test-#{SecureRandom.hex(4)}",
       region: ENV.fetch("S3_REGION", "us-east-1"),
-      access_key_id: ENV.fetch("S3_ACCESS_KEY_ID", "minioadmin"),
-      secret_access_key: ENV.fetch("S3_SECRET_ACCESS_KEY", "minioadmin")
+      access_key_id: ENV.fetch("S3_ACCESS_KEY_ID", "test"),
+      secret_access_key: ENV.fetch("S3_SECRET_ACCESS_KEY", "test")
     }
     create_bucket!
     @adapter = Storage::S3Adapter.new(**@config)
